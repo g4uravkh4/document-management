@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+client/.next/
+client/out/
+client/node_modules/
+
+# Uploaded files
+uploads/
+
+# Prisma generated client
+src/generated/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Prisma CLI artifacts
+.schema.prisma/
+
+# AI assistant skill folders installed by Prisma CLI
+.claude/
+.windsurf/
+.agents/
+skills-lock.json

@@ -1,0 +1,191 @@
+// CA Firm Document Management - Prisma schema
+// All dates are stored in AD (Gregorian). Nepali (BS) dates are converted
+// at the API boundary via the shared `@ca-firm/shared` package.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ThemePreference {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+enum DateFormatPreference {
+  BS
+  AD
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(CLIENT)
+  client       Client?  @relation(fields: [clientId], references: [id])
+  clientId     String?
+  isActive     Boolean  @default(true)
+  avatarKey    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  documents     Document[]
+  settings      UserSetting?
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  pan       String?
+  address   String?
+  isActive  Boolean  @default(true)
+  logoKey   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  documents Document[]
+  folders   Folder[]
+
+  @@map("clients")
+}
+
+model FiscalYear {
+  id        String   @id @default(uuid())
+  label     String   @unique // e.g. "2081/82"
+  startDate DateTime // Shrawan 1, stored in AD
+  endDate   DateTime // Ashad end, stored in AD
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documents Document[]
+  folders   Folder[]
+
+  @@map("fiscal_years")
+}
+
+model DocumentCategory {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  documents Document[]
+
+  @@map("document_categories")
+}
+
+model Document {
+  id           String          @id @default(uuid())
+  client       Client          @relation(fields: [clientId], references: [id])
+  clientId     String
+  fiscalYear   FiscalYear      @relation(fields: [fiscalYearId], references: [id])
+  fiscalYearId String
+  category     DocumentCategory? @relation(fields: [categoryId], references: [id])
+  categoryId   String?
+  folder       Folder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folderId     String?
+  title        String
+  description  String?
+  fileKey      String
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  status       DocumentStatus  @default(PENDING)
+  uploadedBy   User            @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+  uploadedAt   DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([clientId, fiscalYearId])
+  @@index([fiscalYearId])
+  @@index([folderId])
+
+  @@map("documents")
+}
+
+model Folder {
+  id           String      @id @default(uuid())
+  name         String
+  client       Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId     String
+  fiscalYear   FiscalYear  @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  fiscalYearId String
+  parent       Folder?     @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId     String?
+  children     Folder[]    @relation("FolderTree")
+  documents    Document[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([clientId, fiscalYearId, parentId, name])
+  @@index([clientId, fiscalYearId])
+
+  @@map("folders")
+}
+
+model UserSetting {
+  id         String                @id @default(uuid())
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String                @unique
+  theme      ThemePreference       @default(SYSTEM)
+  dateFormat DateFormatPreference  @default(BS)
+  language   String                @default("en")
+
+  @@map("user_settings")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+
+  @@map("refresh_tokens")
+}
+
+enum VerificationPurpose {
+  SIGNUP
+  RESET_PASSWORD
+}
+
+model VerificationCode {
+  id        String              @id @default(uuid())
+  email     String
+  purpose   VerificationPurpose
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([email, purpose])
+  @@map("verification_codes")
+}
