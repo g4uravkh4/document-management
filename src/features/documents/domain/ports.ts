@@ -84,7 +84,8 @@ export interface DocumentRepository {
 }
 
 export interface FileStorage {
-  readStream(key: string): Readable;
+  save(key: string, data: Buffer, contentType: string): Promise<void>;
+  readStream(key: string): Promise<Readable>;
   remove(key: string): Promise<void>;
 }
 

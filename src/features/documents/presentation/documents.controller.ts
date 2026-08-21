@@ -1,6 +1,4 @@
-import { randomUUID } from 'crypto';
-import { mkdirSync } from 'fs';
-import { extname, resolve } from 'path';
+import { memoryStorage } from 'multer';
 import {
   Body,
   Controller,
@@ -18,7 +16,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { diskStorage } from 'multer';
 import type { Response } from 'express';
 import { CurrentUser } from '../../../common/auth/current-user.decorator';
 import type { AuthUser } from '../../../common/auth/auth-user.interface';
@@ -44,9 +41,6 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'application/zip',
 ]);
-
-const uploadDir = resolve(process.cwd(), process.env.UPLOAD_DIR ?? 'uploads');
-mkdirSync(uploadDir, { recursive: true });
 
 @ApiTags('documents')
 @Controller('documents')
@@ -96,13 +90,7 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Upload a document' })
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: uploadDir,
-        filename: (_req, file, cb) => {
-          const ext = extname(file.originalname).toLowerCase();
-          cb(null, `${randomUUID()}${ext}`);
-        },
-      }),
+      storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
         cb(null, ALLOWED_MIME_TYPES.has(file.mimetype));

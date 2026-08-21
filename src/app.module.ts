@@ -15,6 +15,7 @@ import { DashboardModule } from './features/dashboard/dashboard.module';
 import { MediaModule } from './common/media/media.module';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { RolesGuard } from './common/auth/roles.guard';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { RolesGuard } from './common/auth/roles.guard';
     SettingsModule,
     DashboardModule,
     MediaModule,
+    StorageModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

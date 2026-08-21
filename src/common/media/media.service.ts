@@ -1,9 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createReadStream, mkdirSync } from 'fs';
-import { writeFile, unlink } from 'fs/promises';
-import { extname, join, resolve } from 'path';
+import { extname } from 'path';
 import type { Readable } from 'stream';
+import { StorageService } from '../storage/storage.service';
 
 export type MediaKind = 'avatar' | 'logo';
 
@@ -41,46 +39,25 @@ export function imageFileFilter(
 
 @Injectable()
 export class MediaService {
-  private readonly root: string;
-  private readonly avatarDir: string;
-  private readonly logoDir: string;
-
-  constructor(private readonly config: ConfigService) {
-    this.root = resolve(
-      process.cwd(),
-      this.config.get<string>('UPLOAD_DIR', 'uploads'),
-    );
-    this.avatarDir = join(this.root, 'avatars');
-    this.logoDir = join(this.root, 'logos');
-    mkdirSync(this.avatarDir, { recursive: true });
-    mkdirSync(this.logoDir, { recursive: true });
-  }
+  constructor(private readonly storage: StorageService) {}
 
   /**
-   * Persists an uploaded image (memory storage) to disk and returns its key.
-   * Key is relative to the upload root, e.g. `avatars/<uuid>.png`.
+  * Persists an uploaded image and returns its storage key.
    */
   async saveImage(kind: MediaKind, file: Express.Multer.File): Promise<string> {
     const ext = extname(file.originalname).toLowerCase() || '.png';
     const key = `${kind === 'avatar' ? 'avatars' : 'logos'}/${crypto.randomUUID()}${ext}`;
-    await writeFile(join(this.root, key), file.buffer);
+    await this.storage.save(key, file.buffer, file.mimetype);
     return key;
   }
 
-  read(key: string): { stream: Readable; mimeType: string } {
+  async read(key: string): Promise<{ stream: Readable; mimeType: string }> {
     const mimeType =
       MIME_BY_EXT[extname(key).toLowerCase()] ?? 'application/octet-stream';
-    return { stream: createReadStream(join(this.root, key)), mimeType };
+    return { stream: await this.storage.read(key), mimeType };
   }
 
   async remove(key: string | null | undefined): Promise<void> {
-    if (!key) return;
-    try {
-      await unlink(join(this.root, key));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
-      }
-    }
+    await this.storage.remove(key);
   }
 }

@@ -80,20 +80,28 @@ export class DocumentsService {
     const status: DocumentStatus =
       user.role === ROLES.ADMIN && dto.status ? dto.status : 'PENDING';
 
-    const created = await this.documents.create({
-      clientId,
-      fiscalYearId: dto.fiscalYearId,
-      categoryId: dto.categoryId ?? null,
-      folderId: dto.folderId ?? null,
-      title: dto.title,
-      description: dto.description ?? null,
-      fileKey: file.filename,
-      originalName: file.originalname,
-      mimeType: file.mimetype,
-      sizeBytes: file.size,
-      status,
-      uploadedById: user.sub,
-    });
+    const fileKey = `documents/${crypto.randomUUID()}${this.fileExtension(file.originalname)}`;
+    await this.storage.save(fileKey, file.buffer, file.mimetype);
+    let created: DocumentEntity;
+    try {
+      created = await this.documents.create({
+        clientId,
+        fiscalYearId: dto.fiscalYearId,
+        categoryId: dto.categoryId ?? null,
+        folderId: dto.folderId ?? null,
+        title: dto.title,
+        description: dto.description ?? null,
+        fileKey,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        sizeBytes: file.size,
+        status,
+        uploadedById: user.sub,
+      });
+    } catch (error) {
+      await this.storage.remove(fileKey);
+      throw error;
+    }
 
     const item = await this.documents.findById(created.id);
     if (!item) {
@@ -123,6 +131,7 @@ export class DocumentsService {
       await this.ensureFolderMatches(
         query.folderId,
         clientId,
+
         filters.fiscalYearId ?? '',
       );
       filters.folderId = query.folderId;
@@ -142,7 +151,7 @@ export class DocumentsService {
   async download(user: AuthUser, id: string): Promise<DownloadResult> {
     const item = await this.detail(user, id);
     return {
-      stream: this.storage.readStream(item.fileKey),
+      stream: await this.storage.readStream(item.fileKey),
       mimeType: item.mimeType,
       filename: this.sanitizeFilename(item.originalName),
       sizeBytes: item.sizeBytes,
@@ -289,5 +298,10 @@ export class DocumentsService {
 
   private sanitizeFilename(name: string): string {
     return name.replace(/["\\/]/g, '_').replace(/[^\x20-\x7E]/g, '_');
+  }
+
+  private fileExtension(filename: string): string {
+    const extension = filename.slice(filename.lastIndexOf('.')).toLowerCase();
+    return /^[.][a-z0-9]{1,10}$/.test(extension) ? extension : '';
   }
 }

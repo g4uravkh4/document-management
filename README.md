@@ -59,6 +59,33 @@ $ npm run test:cov
 
 ## Deployment
 
+### Free-tier deployment
+
+The API supports persistent S3-compatible storage in production and local disk
+storage during development. Deploy the `client` directory to Vercel and the
+repository root to Render as a Node web service.
+
+For Render, use:
+
+```text
+Build command: npm install && npm run build
+Start command: npx prisma migrate deploy && npm run start:prod
+```
+
+Set the API variables from `.env.example`. For production uploads, set
+`STORAGE_DRIVER=s3` and provide an S3-compatible bucket. Supabase Storage and
+Cloudflare R2 both work. The bucket can remain private because downloads are
+streamed through the authenticated API.
+
+For Vercel, set `API_BASE_URL` to the public Render API URL. Set the API's
+`CORS_ORIGIN` to the Vercel URL. Configure SMTP variables with a transactional
+email provider such as Brevo or Resend; without `SMTP_HOST`, verification codes
+are intentionally logged only for local development.
+
+Do not commit `.env` files or provider secrets. After deployment, test account
+registration, email verification, login, document upload/download, avatar and
+logo upload, password reset, and a full redeploy to confirm files persist.
+
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:

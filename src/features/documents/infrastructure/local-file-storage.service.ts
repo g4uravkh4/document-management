@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream, mkdirSync } from 'fs';
-import { unlink } from 'fs/promises';
+import { unlink, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import type { Readable } from 'stream';
 import { FileStorage } from '../domain/ports';
@@ -18,8 +18,17 @@ export class LocalFileStorage implements FileStorage {
     mkdirSync(this.dir, { recursive: true });
   }
 
-  readStream(key: string): Readable {
+  async readStream(key: string): Promise<Readable> {
     return createReadStream(join(this.dir, key));
+  }
+
+  async save(
+    key: string,
+    data: Buffer,
+    _contentType: string,
+  ): Promise<void> {
+    mkdirSync(join(this.dir, key, '..'), { recursive: true });
+    await writeFile(join(this.dir, key), data);
   }
 
   async remove(key: string): Promise<void> {

@@ -112,7 +112,7 @@ export class UsersController {
     if (!key) {
       throw new NotFoundException('No avatar set');
     }
-    const { stream, mimeType } = this.media.read(key);
+    const { stream, mimeType } = await this.media.read(key);
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
     return new StreamableFile(stream);
