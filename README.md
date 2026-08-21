@@ -1,125 +1,183 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# CA Firm Document Management
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A document management application for CA firms, with a NestJS API, Next.js web client, PostgreSQL database, email verification, and persistent file storage.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- API: NestJS, Prisma, PostgreSQL
+- Web: Next.js, React
+- Storage: local disk in development or S3-compatible storage in production
+- Mail: SMTP provider such as Brevo or Resend
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Local setup
 
-## Project setup
+1. Install Node.js 20 or newer.
+2. Install dependencies:
 
-```bash
-$ npm install
-```
+   ```bash
+   npm install
+   ```
 
-## Compile and run the project
+3. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+4. Generate Prisma Client and apply local migrations:
 
-```bash
-# development
-$ npm run start
+   ```bash
+   npm run db:generate
+   npm run db:migrate
+   ```
 
-# watch mode
-$ npm run start:dev
+5. Start the API and web client:
 
-# production mode
-$ npm run start:prod
-```
+   ```bash
+   npm run dev
+   ```
 
-## Run tests
+The web client runs at `http://localhost:3001`, the API at `http://localhost:3000/api`, and Swagger at `http://localhost:3000/api/docs`.
+
+## Checks
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm test -- --passWithNoTests
+npm run build
+npm run build:web
 ```
 
-## Deployment
+GitHub Actions runs these checks for pull requests and pushes.
 
-### Free-tier deployment
+## Free deployment architecture
 
-The API supports persistent S3-compatible storage in production and local disk
-storage during development. Deploy the `client` directory to Vercel and the
-repository root to Render as a Node web service.
+The recommended free-tier setup is:
 
-For Render, use:
+- GitHub for source control and Actions
+- Supabase for PostgreSQL and S3-compatible Storage
+- Render for the NestJS API
+- Vercel for the Next.js client
+- Brevo for SMTP email
+
+Free tiers can sleep, have quotas, and are not a guarantee of zero cost. Check each provider's current limits before using the application with real client documents.
+
+## Step-by-step deployment
+
+### 1. Push to GitHub
+
+Create an empty GitHub repository, then run:
+
+```powershell
+git add .
+git commit -m "Prepare application for deployment"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+git push -u origin main
+```
+
+Do not commit `.env` files or provider credentials.
+
+### 2. Create the Supabase database
+
+1. Create a Supabase project.
+2. Open **Project Settings > Database**.
+3. Copy the connection string appropriate for your deployment. For pooled connections, use the transaction pooler URL and replace its password.
+4. Save it for Render as `DATABASE_URL`.
+
+### 3. Create persistent file storage
+
+1. In Supabase Storage, create a private bucket named `ca-firm-files`.
+2. Open the Storage S3 connection settings.
+3. Save the endpoint, region, bucket name, access key, and secret key.
+4. Render will use:
+
+   ```env
+   STORAGE_DRIVER=s3
+   S3_ENDPOINT=your-s3-endpoint
+   S3_REGION=auto
+   S3_BUCKET=ca-firm-files
+   S3_ACCESS_KEY_ID=your-access-key
+   S3_SECRET_ACCESS_KEY=your-secret-key
+   S3_FORCE_PATH_STYLE=false
+   ```
+
+The bucket stays private. Authenticated API endpoints stream files to users.
+
+### 4. Configure SMTP email
+
+Create and verify a sender with Brevo or another transactional email provider. Use the provider's SMTP credentials, not your normal account password:
+
+```env
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-provider-login
+SMTP_PASS=your-smtp-key
+MAIL_FROM=your-verified-sender@example.com
+```
+
+Without `SMTP_HOST`, the API only logs verification codes and is not suitable for production.
+
+### 5. Deploy the API to Render
+
+Create a Render **Web Service** connected to the GitHub repository:
 
 ```text
-Build command: npm install && npm run build
-Start command: npx prisma migrate deploy && npm run start:prod
+Root Directory: leave empty
+Runtime: Node
+Build Command: npm install && npm run build
+Start Command: npx prisma migrate deploy && npm run start:prod
+Instance Type: Free
 ```
 
-Set the API variables from `.env.example`. For production uploads, set
-`STORAGE_DRIVER=s3` and provide an S3-compatible bucket. Supabase Storage and
-Cloudflare R2 both work. The bucket can remain private because downloads are
-streamed through the authenticated API.
+Add all production values from `.env.example` in Render's environment settings. Initially set `CORS_ORIGIN` to a temporary value; update it after Vercel gives you the final client URL. The API URL will look like:
 
-For Vercel, set `API_BASE_URL` to the public Render API URL. Set the API's
-`CORS_ORIGIN` to the Vercel URL. Configure SMTP variables with a transactional
-email provider such as Brevo or Resend; without `SMTP_HOST`, verification codes
-are intentionally logged only for local development.
+```text
+https://your-api.onrender.com
+```
 
-Do not commit `.env` files or provider secrets. After deployment, test account
-registration, email verification, login, document upload/download, avatar and
-logo upload, password reset, and a full redeploy to confirm files persist.
+Test `https://your-api.onrender.com/api/health` before deploying the client.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### 6. Deploy the client to Vercel
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. Import the same GitHub repository into Vercel.
+2. Set **Root Directory** to `client`.
+3. Select Next.js.
+4. Add `API_BASE_URL=https://your-api.onrender.com` as an environment variable.
+5. Deploy. The client URL will look like `https://your-client.vercel.app`.
+
+### 7. Finish CORS configuration
+
+In Render, set:
+
+```env
+CORS_ORIGIN=https://your-client.vercel.app
+```
+
+Save and redeploy the API. Use a comma-separated list if more than one trusted frontend origin is needed.
+
+### 8. Create the first administrator
+
+Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in Render. Run the seed command once from a trusted environment using the production `DATABASE_URL`:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run db:seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Never use the example password in production.
 
-## Resources
+### 9. Verify the deployment
 
-Check out a few resources that may come in handy when working with NestJS:
+Test registration, email verification, login, password reset, client creation, avatar upload, logo upload, document upload, document download, deletion, and a full API redeploy. Files must still download after the redeploy.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## GitHub Actions CI/CD
 
-## Support
+The workflow at `.github/workflows/ci-cd.yml` runs automatically on pull requests and pushes. It installs dependencies, generates Prisma Client, runs tests, builds the API, and builds the web client.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+To let the workflow trigger production deployments after a successful `main` branch build:
 
-## Stay in touch
+1. Create a Render deploy hook for the API.
+2. Create a Vercel deploy hook for the client.
+3. In GitHub, open **Settings > Secrets and variables > Actions**.
+4. Add repository secrets named `RENDER_DEPLOY_HOOK_URL` and `VERCEL_DEPLOY_HOOK_URL`.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+The deployment job skips either provider when its secret is absent. CI works immediately, while CD can be enabled one provider at a time.
 
-## License
+## Environment reference
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+See `.env.example` and `client/.env.example`. Secrets belong in local ignored `.env` files or the hosting provider's secret manager, never in Git.
