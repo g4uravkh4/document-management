@@ -4,7 +4,12 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream, mkdirSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
@@ -13,6 +18,7 @@ import { Readable } from 'stream';
 
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
   private readonly driver: string;
   private readonly root: string;
   private readonly bucket?: string;
@@ -25,7 +31,7 @@ export class StorageService {
     if (this.driver === 's3') {
       this.bucket = config.getOrThrow<string>('S3_BUCKET');
       this.client = new S3Client({
-        region: config.get<string>('S3_REGION', 'auto'),
+        region: config.get<string>('S3_REGION', 'us-east-1'),
         endpoint: config.get<string>('S3_ENDPOINT'),
         forcePathStyle: config.get<string>('S3_FORCE_PATH_STYLE') === 'true',
         credentials: {
@@ -40,14 +46,21 @@ export class StorageService {
 
   async save(key: string, data: Buffer, contentType: string): Promise<void> {
     if (this.driver === 's3') {
-      await this.client!.send(
-        new PutObjectCommand({
-          Bucket: this.bucket,
-          Key: key,
-          Body: data,
-          ContentType: contentType,
-        }),
-      );
+      try {
+        await this.client!.send(
+          new PutObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+            Body: data,
+            ContentType: contentType,
+          }),
+        );
+      } catch (error) {
+        this.logStorageError('upload', error);
+        throw new ServiceUnavailableException(
+          'File storage is temporarily unavailable. Please try again later.',
+        );
+      }
       return;
     }
 
@@ -58,9 +71,17 @@ export class StorageService {
 
   async read(key: string): Promise<Readable> {
     if (this.driver === 's3') {
-      const result = await this.client!.send(
-        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      );
+      let result;
+      try {
+        result = await this.client!.send(
+          new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+        );
+      } catch (error) {
+        this.logStorageError('download', error);
+        throw new ServiceUnavailableException(
+          'File storage is temporarily unavailable. Please try again later.',
+        );
+      }
       if (!result.Body) throw new NotFoundException('Stored file not found');
       if (result.Body instanceof Readable) return result.Body;
       return Readable.fromWeb(
@@ -74,9 +95,16 @@ export class StorageService {
   async remove(key: string | null | undefined): Promise<void> {
     if (!key) return;
     if (this.driver === 's3') {
-      await this.client!.send(
-        new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
-      );
+      try {
+        await this.client!.send(
+          new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+        );
+      } catch (error) {
+        this.logStorageError('delete', error);
+        throw new ServiceUnavailableException(
+          'File storage is temporarily unavailable. Please try again later.',
+        );
+      }
       return;
     }
 
@@ -85,5 +113,10 @@ export class StorageService {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
+  }
+
+  private logStorageError(operation: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.error(`Unable to ${operation} file in S3 storage: ${message}`);
   }
 }
