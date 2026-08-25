@@ -10,7 +10,7 @@
     "shared"
   ],
   "scripts": {
-    "build": "npm run build:shared && nest build",
+    "build": "npm run build:shared && npm run db:generate && nest build",
     "build:shared": "npm --prefix shared run build",
     "build:web": "npm --prefix client run build",
     "dev": "concurrently -n shared,api,web -c yellow,blue,green \"npm run dev:shared\" \"npm run dev:api\" \"npm run dev:web\"",
