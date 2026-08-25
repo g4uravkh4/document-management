@@ -165,6 +165,14 @@ Never use the example password in production.
 
 Test registration, email verification, login, password reset, client creation, avatar upload, logo upload, document upload, document download, deletion, and a full API redeploy. Files must still download after the redeploy.
 
+### Client account access
+
+A client user can only see documents belonging to the Client record linked to
+that user. After a client registers and verifies their email, an administrator
+must open **Users**, edit the user, set the role to `CLIENT`, and select the
+matching client. Documents uploaded for a different client are intentionally
+not visible to that account.
+
 ## GitHub Actions CI/CD
 
 The workflow at `.github/workflows/ci-cd.yml` runs automatically on pull requests and pushes. It installs dependencies, generates Prisma Client, runs tests, builds the API, and builds the web client.

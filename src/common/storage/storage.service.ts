@@ -84,9 +84,11 @@ export class StorageService {
       }
       if (!result.Body) throw new NotFoundException('Stored file not found');
       if (result.Body instanceof Readable) return result.Body;
-      return Readable.fromWeb(
-        result.Body as unknown as import('stream/web').ReadableStream,
-      );
+      if ('transformToByteArray' in result.Body) {
+        const bytes = await result.Body.transformToByteArray();
+        return Readable.from(Buffer.from(bytes));
+      }
+      return Readable.from(result.Body as AsyncIterable<Uint8Array>);
     }
 
     return createReadStream(join(this.root, key));
