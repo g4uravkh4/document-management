@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
@@ -23,10 +27,14 @@ export class MailService {
     if (host) {
       const port = Number(config.get('SMTP_PORT') ?? '587');
       const secure = config.get<string>('SMTP_SECURE') === 'true';
+      const timeout = Number(config.get('SMTP_TIMEOUT_MS') ?? '10000');
       this.transporter = nodemailer.createTransport({
         host,
         port,
         secure,
+        connectionTimeout: timeout,
+        greetingTimeout: timeout,
+        socketTimeout: timeout,
         auth: {
           user: config.getOrThrow<string>('SMTP_USER'),
           pass: config.getOrThrow<string>('SMTP_PASS'),
@@ -52,13 +60,20 @@ export class MailService {
     }
 
     const { subject, message } = this.messageFor(purpose, code);
-    await this.transporter.sendMail({
-      from: this.from,
-      to,
-      subject,
-      text: message,
-      html: this.htmlMessage(subject, message),
-    });
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to,
+        subject,
+        text: message,
+        html: this.htmlMessage(subject, message),
+      });
+    } catch (error) {
+      this.logger.error(`Unable to send ${purpose} email`, error);
+      throw new ServiceUnavailableException(
+        'Email delivery is temporarily unavailable. Please try again later.',
+      );
+    }
     return { delivered: true };
   }
 
