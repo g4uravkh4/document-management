@@ -56,15 +56,6 @@ export class DocumentsController {
     return this.documentsService.list(user, query);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a document' })
-  detail(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<DocumentItem> {
-    return this.documentsService.detail(user, id);
-  }
-
   @Get(':id/download')
   @ApiOperation({ summary: 'Download a document file' })
   async download(
@@ -77,12 +68,44 @@ export class DocumentsController {
       id,
     );
     res.setHeader('Content-Type', result.mimeType);
-    res.setHeader('Content-Length', result.sizeBytes);
+    res.setHeader('Content-Length', String(result.sizeBytes));
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="${result.filename}"`,
+      `attachment; filename="${result.filename}"; filename*=UTF-8''${encodeURIComponent(result.filename)}`,
     );
+    res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
     return new StreamableFile(result.stream);
+  }
+
+  @Get(':id/view')
+  @ApiOperation({ summary: 'View a document inline in browser' })
+  async view(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const result: DownloadResult = await this.documentsService.download(
+      user,
+      id,
+    );
+    res.setHeader('Content-Type', result.mimeType);
+    res.setHeader('Content-Length', String(result.sizeBytes));
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${result.filename}"; filename*=UTF-8''${encodeURIComponent(result.filename)}`,
+    );
+    res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    return new StreamableFile(result.stream);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a document' })
+  detail(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<DocumentItem> {
+    return this.documentsService.detail(user, id);
   }
 
   @Post()

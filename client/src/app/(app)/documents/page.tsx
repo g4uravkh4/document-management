@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ChevronRight,
   Download,
+  Eye,
   FileText,
   Folder as FolderIcon,
   FolderPlus,
@@ -17,8 +18,9 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { api, downloadFile } from '@/lib/api';
+import { api, downloadFile, viewFile } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast-context';
 import { formatDate, formatDateTime, formatFileSize } from '@/lib/format';
 import {
   Badge,
@@ -76,6 +78,7 @@ function findPath(nodes: FolderNode[], id: string): FolderNode[] {
 export default function DocumentsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
+  const toast = useToast();
 
   const [years, setYears] = useState<FiscalYear[]>([]);
   const [categories, setCategories] = useState<DocumentCategory[]>([]);
@@ -217,8 +220,9 @@ export default function DocumentsPage() {
       if (currentFolderId === deleteFolder.id) openFolder(null);
       setDeleteFolder(null);
       await loadTree();
+      toast.success(`Folder "${deleteFolder.name}" deleted successfully`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
       setDeleteFolder(null);
     } finally {
       setDeletingFolder(false);
@@ -231,8 +235,9 @@ export default function DocumentsPage() {
         folderId: targetFolderId ?? '',
       });
       await loadDocs();
+      toast.success('Document moved successfully');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Move failed');
+      toast.error(err instanceof Error ? err.message : 'Move failed');
     }
   }
 
@@ -250,7 +255,7 @@ export default function DocumentsPage() {
       try {
         await api.upload('/documents', form);
       } catch (err) {
-        alert(
+        toast.error(
           `Failed to upload ${file.name}: ${
             err instanceof Error ? err.message : 'error'
           }`,
@@ -259,6 +264,7 @@ export default function DocumentsPage() {
       }
     }
     await loadDocs();
+    toast.success(files.length === 1 ? `Uploaded "${files[0].name}"` : `Uploaded ${files.length} documents`);
   }
 
   function handleMainDrop(event: DragEvent<HTMLDivElement>) {
@@ -916,6 +922,7 @@ function FolderFormModal({
   const [name, setName] = useState(folder?.name ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const isDirty = mode === 'create' || name !== (folder?.name ?? '');
 
@@ -926,6 +933,7 @@ function FolderFormModal({
     try {
       if (mode === 'rename' && folder) {
         await api.patch(`/folders/${folder.id}`, { name });
+        toast.success('Folder renamed successfully');
       } else {
         await api.post('/folders', {
           name,
@@ -933,10 +941,13 @@ function FolderFormModal({
           fiscalYearId,
           ...(parentId ? { parentId } : {}),
         });
+        toast.success('Folder created successfully');
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      const msg = err instanceof Error ? err.message : 'Save failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -987,18 +998,33 @@ function DocumentTile({
 }) {
   const [dragging, setDragging] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
+  const toast = useToast();
 
   async function handleDownload() {
     setDownloading(true);
     try {
       await downloadFile(`/documents/${doc.id}/download`, doc.originalName);
+      toast.success(`Downloaded "${doc.title}"`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Download failed');
+      toast.error(err instanceof Error ? err.message : 'Download failed');
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleView() {
+    setViewing(true);
+    try {
+      await viewFile(`/documents/${doc.id}/view`, doc.originalName);
+      toast.success(`Opened "${doc.title}" in new tab`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'View failed');
+    } finally {
+      setViewing(false);
     }
   }
 
@@ -1008,8 +1034,9 @@ function DocumentTile({
       await api.delete(`/documents/${doc.id}`);
       setConfirmOpen(false);
       onChanged();
+      toast.success(`Deleted "${doc.title}"`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
       setConfirmOpen(false);
     } finally {
       setDeleting(false);
@@ -1059,7 +1086,15 @@ function DocumentTile({
           · {formatDateTime(doc.uploadedAt)}
         </p>
 
-        <div className="mt-3 hidden items-center justify-end gap-1 border-t border-gray-100 pt-2 group-hover:flex">
+        <div className="mt-3 flex items-center justify-end gap-1 border-t border-gray-100 pt-2">
+          <Button
+            variant="ghost"
+            onClick={() => void handleView()}
+            loading={viewing}
+            title="View in new tab"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             onClick={() => void handleDownload()}
@@ -1144,11 +1179,14 @@ function UploadModal({
   const [error, setError] = useState<string | null>(null);
 
   const currentYear = years.find((y) => y.id === fiscalYearId);
+  const toast = useToast();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
-      setError('Please choose a file');
+      const msg = 'Please choose a file';
+      setError(msg);
+      toast.error(msg);
       return;
     }
     const form = new FormData();
@@ -1165,10 +1203,13 @@ function UploadModal({
     setError(null);
     try {
       await api.upload('/documents', form, setProgress);
+      toast.success(`Document "${title}" uploaded successfully`);
       onClose();
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setUploading(false);
     }
@@ -1307,6 +1348,7 @@ function EditDocumentModal({
   const [error, setError] = useState<string | null>(null);
 
   const isDirty = status !== doc.status || folderId !== (doc.folderId ?? '');
+  const toast = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -1334,9 +1376,12 @@ function EditDocumentModal({
         status,
         folderId,
       });
+      toast.success(`Document "${doc.title}" updated`);
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Update failed');
+      const msg = err instanceof Error ? err.message : 'Update failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

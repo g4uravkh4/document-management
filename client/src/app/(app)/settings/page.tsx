@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Bell, Monitor, Moon, Palette, Sun } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import {
   Button,
   Card,
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     api
@@ -72,8 +74,11 @@ export default function SettingsPage() {
       setSetting(updated);
       setOriginalSetting(updated);
       setSuccess(true);
+      toast.success('Settings saved successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings');
+      const msg = err instanceof Error ? err.message : 'Failed to save settings';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { FileStack } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { useToast } from '@/lib/toast-context';
 import { Button, ErrorBanner, Input, Label } from '@/components/ui';
 import type { AuthTokens } from '@/lib/types';
 
@@ -21,6 +22,7 @@ interface CodeResponse {
 export default function LoginPage() {
   const router = useRouter();
   const { login, setSession } = useAuth();
+  const toast = useToast();
 
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
@@ -49,9 +51,12 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
+      toast.success('Signed in successfully');
       router.replace('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const msg = err instanceof Error ? err.message : 'Login failed';
+      setError(msg);
+      toast.error(msg);
       setSubmitting(false);
     }
   }
@@ -59,7 +64,9 @@ export default function LoginPage() {
   async function handleRegister(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      const msg = 'Passwords do not match';
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setError(null);
@@ -73,10 +80,13 @@ export default function LoginPage() {
       setPendingEmail(email);
       setPendingDevCode(result.devCode ?? null);
       setInfo(result.message);
+      toast.success('Account created. Please verify your email');
       setMode('verify');
       setSubmitting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      const msg = err instanceof Error ? err.message : 'Registration failed';
+      setError(msg);
+      toast.error(msg);
       setSubmitting(false);
     }
   }
@@ -91,9 +101,12 @@ export default function LoginPage() {
         code,
       });
       setSession(tokens);
+      toast.success('Email verified successfully');
       router.replace('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
+      const msg = err instanceof Error ? err.message : 'Verification failed';
+      setError(msg);
+      toast.error(msg);
       setSubmitting(false);
     }
   }
@@ -109,10 +122,13 @@ export default function LoginPage() {
       setPendingEmail(email);
       setPendingDevCode(result.devCode ?? null);
       setInfo(result.message);
+      toast.success('Reset code sent to your email');
       setMode('reset');
       setSubmitting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
+      const msg = err instanceof Error ? err.message : 'Request failed';
+      setError(msg);
+      toast.error(msg);
       setSubmitting(false);
     }
   }
@@ -120,7 +136,9 @@ export default function LoginPage() {
   async function handleReset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      const msg = 'Passwords do not match';
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setError(null);
@@ -132,6 +150,7 @@ export default function LoginPage() {
         newPassword,
       });
       setInfo(result.message);
+      toast.success('Password reset successfully. Please sign in');
       setPendingDevCode(null);
       setPassword('');
       setNewPassword('');
@@ -140,7 +159,9 @@ export default function LoginPage() {
       setMode('signin');
       setSubmitting(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reset failed');
+      const msg = err instanceof Error ? err.message : 'Reset failed';
+      setError(msg);
+      toast.error(msg);
       setSubmitting(false);
     }
   }

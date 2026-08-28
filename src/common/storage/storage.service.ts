@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream, mkdirSync } from 'fs';
-import { mkdir, unlink, writeFile } from 'fs/promises';
+import { mkdir, stat, unlink, writeFile } from 'fs/promises';
 import { dirname, join, resolve } from 'path';
 import { Readable } from 'stream';
 
@@ -76,7 +76,16 @@ export class StorageService {
         result = await this.client!.send(
           new GetObjectCommand({ Bucket: this.bucket, Key: key }),
         );
-      } catch (error) {
+      } catch (error: unknown) {
+        const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+        const isNotFound =
+          err?.name === 'NoSuchKey' ||
+          err?.name === 'NotFound' ||
+          err?.$metadata?.httpStatusCode === 404;
+        if (isNotFound) {
+          this.logger.warn(`S3 file not found: ${key}`);
+          throw new NotFoundException('Stored file not found');
+        }
         this.logStorageError('download', error);
         throw new ServiceUnavailableException(
           'File storage is temporarily unavailable. Please try again later.',
@@ -85,13 +94,22 @@ export class StorageService {
       if (!result.Body) throw new NotFoundException('Stored file not found');
       if (result.Body instanceof Readable) return result.Body;
       if ('transformToByteArray' in result.Body) {
-        const bytes = await result.Body.transformToByteArray();
+        const bytes = await (result.Body as { transformToByteArray: () => Promise<Uint8Array> }).transformToByteArray();
         return Readable.from(Buffer.from(bytes));
       }
       return Readable.from(result.Body as AsyncIterable<Uint8Array>);
     }
 
-    return createReadStream(join(this.root, key));
+    const fullPath = join(this.root, key);
+    try {
+      await stat(fullPath);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new NotFoundException('Stored file not found');
+      }
+      throw err;
+    }
+    return createReadStream(fullPath);
   }
 
   async remove(key: string | null | undefined): Promise<void> {

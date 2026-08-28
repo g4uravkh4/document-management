@@ -5,6 +5,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast-context';
 import {
   Avatar,
   avatarSrc,
@@ -49,6 +50,7 @@ function ProfileCard({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const toast = useToast();
 
   const isDirty = name !== user.name;
 
@@ -57,7 +59,9 @@ function ProfileCard({
     event.target.value = '';
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
-      setError('Image must be 2 MB or smaller.');
+      const msg = 'Image must be 2 MB or smaller.';
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setUploading(true);
@@ -72,8 +76,11 @@ function ProfileCard({
       );
       onUpdated({ ...user, avatarKey: avatarKey ?? null });
       setSuccess(true);
+      toast.success('Profile photo updated');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setUploading(false);
     }
@@ -88,8 +95,11 @@ function ProfileCard({
       const saved = await api.patch<PublicUser>('/users/me', { name });
       onUpdated(saved);
       setSuccess(true);
+      toast.success('Profile updated successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      const msg = err instanceof Error ? err.message : 'Save failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -188,13 +198,16 @@ function PasswordCard() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const toast = useToast();
 
   const isDirty = currentPassword !== '' || newPassword !== '' || confirmPassword !== '';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
+      const msg = 'New passwords do not match';
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setSaving(true);
@@ -206,8 +219,11 @@ function PasswordCard() {
       setNewPassword('');
       setConfirmPassword('');
       setSuccess(true);
+      toast.success('Password updated successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Password change failed');
+      const msg = err instanceof Error ? err.message : 'Password change failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

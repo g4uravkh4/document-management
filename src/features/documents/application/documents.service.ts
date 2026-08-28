@@ -152,7 +152,7 @@ export class DocumentsService {
     const item = await this.detail(user, id);
     return {
       stream: await this.storage.readStream(item.fileKey),
-      mimeType: item.mimeType,
+      mimeType: item.mimeType || 'application/octet-stream',
       filename: this.sanitizeFilename(item.originalName),
       sizeBytes: item.sizeBytes,
     };

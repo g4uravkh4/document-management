@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast-context';
 import { formatDate } from '@/lib/format';
 import {
   Avatar,
@@ -115,6 +116,7 @@ function UserRow({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const toast = useToast();
 
   async function handleToggleActive() {
     if (toggling) return;
@@ -122,8 +124,9 @@ function UserRow({
     try {
       await api.patch(`/users/${u.id}`, { isActive: !u.isActive });
       onChanged();
+      toast.success(`User "${u.name}" ${!u.isActive ? 'activated' : 'deactivated'}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Update failed');
+      toast.error(err instanceof Error ? err.message : 'Update failed');
     } finally {
       setToggling(false);
     }
@@ -135,8 +138,9 @@ function UserRow({
       await api.delete(`/users/${u.id}`);
       setConfirmOpen(false);
       onChanged();
+      toast.success(`User "${u.name}" deleted`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
       setConfirmOpen(false);
     } finally {
       setDeleting(false);
@@ -243,6 +247,7 @@ function UserModal({
     password !== '' ||
     avatarFile !== null
   );
+  const toast = useToast();
 
   useEffect(() => {
     api
@@ -301,10 +306,13 @@ function UserModal({
         form.append('file', avatarFile);
         await api.upload(`/users/${savedId}/avatar`, form);
       }
+      toast.success(isEdit ? `User "${name}" updated` : `User "${name}" created`);
       onSaved();
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      const msg = err instanceof Error ? err.message : 'Save failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

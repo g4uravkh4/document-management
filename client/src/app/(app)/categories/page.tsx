@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import { Plus, Tags } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast-context';
 import {
   Button,
   Card,
@@ -105,6 +106,7 @@ function CategoryRow({
   const [editing, setEditing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const toast = useToast();
 
   async function handleDelete() {
     setDeleting(true);
@@ -112,8 +114,9 @@ function CategoryRow({
       await api.delete(`/document-categories/${category.id}`);
       setConfirmOpen(false);
       onChanged();
+      toast.success(`Category "${category.name}" deleted`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
       setConfirmOpen(false);
     } finally {
       setDeleting(false);
@@ -191,6 +194,7 @@ function CategoryModal({
   const [error, setError] = useState<string | null>(null);
 
   const isDirty = !isEdit || name !== (category?.name ?? '');
+  const toast = useToast();
 
   function close() {
     if (onClose) onClose();
@@ -204,13 +208,17 @@ function CategoryModal({
     try {
       if (isEdit) {
         await api.patch(`/document-categories/${category!.id}`, { name });
+        toast.success(`Category "${name}" updated`);
       } else {
         await api.post('/document-categories', { name });
+        toast.success(`Category "${name}" created`);
       }
       onSaved();
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      const msg = err instanceof Error ? err.message : 'Save failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

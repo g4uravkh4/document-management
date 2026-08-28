@@ -211,30 +211,87 @@ function safeErrorMessage(text: string): string {
   }
 }
 
-export async function downloadFile(
-  path: string,
-  fallbackName: string,
-): Promise<void> {
+async function fetchWithAuthForBlob(path: string): Promise<Response> {
   const headers = new Headers();
   const accessToken = getAccessToken();
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
-  const response = await fetch(`/api${path}`, { headers });
+  let response = await fetch(`/api${path}`, { headers });
+  if (response.status === 401 && getRefreshToken()) {
+    refreshInFlight ??= refreshTokens().finally(() => {
+      refreshInFlight = null;
+    });
+    const refreshed = await refreshInFlight;
+    if (refreshed) {
+      const retryHeaders = new Headers();
+      const newToken = getAccessToken();
+      if (newToken) {
+        retryHeaders.set('Authorization', `Bearer ${newToken}`);
+      }
+      response = await fetch(`/api${path}`, { headers: retryHeaders });
+    }
+  }
+  return response;
+}
+
+function extractFilename(disposition: string, fallbackName: string): string {
+  const utf8Match = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(disposition);
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1].replace(/"/g, ''));
+    } catch {
+      // fall through
+    }
+  }
+  const match = /filename="?([^"]+)"?/.exec(disposition);
+  return match ? match[1] : fallbackName;
+}
+
+export async function downloadFile(
+  path: string,
+  fallbackName: string,
+): Promise<void> {
+  const response = await fetchWithAuthForBlob(path);
   if (!response.ok) {
     throw await parseError(response);
   }
   const blob = await response.blob();
   const disposition = response.headers.get('Content-Disposition') ?? '';
-  const match = /filename="?([^"]+)"?/.exec(disposition);
-  const filename = match ? match[1] : fallbackName;
+  const filename = extractFilename(disposition, fallbackName);
 
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
+  anchor.rel = 'noopener';
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function viewFile(
+  path: string,
+  fallbackName?: string,
+): Promise<void> {
+  const response = await fetchWithAuthForBlob(path);
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+  const blob = await response.blob();
+  const contentType = response.headers.get('Content-Type') || blob.type || 'application/octet-stream';
+  const typedBlob = blob.type === contentType ? blob : new Blob([blob], { type: contentType });
+  const url = URL.createObjectURL(typedBlob);
+  const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!newWindow) {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }

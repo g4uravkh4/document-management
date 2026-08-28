@@ -6,6 +6,7 @@ import { CalendarRange, Plus } from 'lucide-react';
 import { adInstantToAd } from '@ca-firm/shared';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/lib/toast-context';
 import { formatDate } from '@/lib/format';
 import { BsDateInput } from '@/components/bs-date-input';
 import {
@@ -113,6 +114,7 @@ function FiscalYearRow({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const toast = useToast();
 
   async function handleToggleActive() {
     if (toggling) return;
@@ -122,8 +124,9 @@ function FiscalYearRow({
         isActive: !year.isActive,
       });
       onChanged();
+      toast.success(`Fiscal year "${year.label}" ${!year.isActive ? 'activated' : 'deactivated'}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Update failed');
+      toast.error(err instanceof Error ? err.message : 'Update failed');
     } finally {
       setToggling(false);
     }
@@ -135,8 +138,9 @@ function FiscalYearRow({
       await api.delete(`/fiscal-years/${year.id}`);
       setConfirmOpen(false);
       onChanged();
+      toast.success(`Fiscal year "${year.label}" deleted`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed');
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
       setConfirmOpen(false);
     } finally {
       setDeleting(false);
@@ -236,6 +240,7 @@ function FiscalYearModal({
     startDate !== (year ? toDateInput(year.startDate) : '') ||
     endDate !== (year ? toDateInput(year.endDate) : '')
   );
+  const toast = useToast();
 
   function close() {
     if (onClose) onClose();
@@ -247,7 +252,9 @@ function FiscalYearModal({
     setSaving(true);
     setError(null);
     if (startDate && endDate && startDate > endDate) {
-      setError('Start date must be before the end date');
+      const msg = 'Start date must be before the end date';
+      setError(msg);
+      toast.error(msg);
       setSaving(false);
       return;
     }
@@ -259,13 +266,17 @@ function FiscalYearModal({
     try {
       if (isEdit) {
         await api.patch(`/fiscal-years/${year!.id}`, body);
+        toast.success(`Fiscal year "${label}" updated`);
       } else {
         await api.post('/fiscal-years', body);
+        toast.success(`Fiscal year "${label}" created`);
       }
       onSaved();
       close();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
+      const msg = err instanceof Error ? err.message : 'Save failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
