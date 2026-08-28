@@ -102,24 +102,32 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t border-gray-200 px-5 py-4">
-          <div className="mb-3 flex items-center gap-3">
-            <Avatar name={user.name} src={avatarSrc(user.id)} size={36} />
-            <div className="min-w-0 leading-tight">
-              <p className="truncate text-sm font-medium text-gray-900">
-                {user.name}
-              </p>
-              <p className="truncate text-xs text-gray-500">{user.email}</p>
+        <div className="m-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <Avatar name={user.name} src={avatarSrc(user.id)} size={36} />
+              <div className="min-w-0 leading-tight">
+                <p className="truncate text-sm font-medium text-gray-900">
+                  {user.name}
+                </p>
+                <p className="truncate text-xs text-gray-500">{user.email}</p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              title="Sign out"
+              aria-label="Sign out"
+              className="shrink-0 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
+          <div className="mt-2.5">
+            <Badge color={user.role === 'ADMIN' ? 'indigo' : 'green'}>
+              {user.role}
+            </Badge>
+          </div>
         </div>
       </aside>
 
@@ -131,16 +139,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               CA Doc Manager
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge color={user.role === 'ADMIN' ? 'indigo' : 'green'}>
-              {user.role}
-            </Badge>
-            <div className="text-right leading-tight">
-              <p className="text-sm font-medium text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.email}</p>
-            </div>
-            <Avatar name={user.name} src={avatarSrc(user.id)} size={36} />
-          </div>
+          <p className="hidden text-sm text-gray-500 md:block">
+            Signed in as{' '}
+            <span className="font-medium text-gray-900">{user.name}</span>
+          </p>
+          <Avatar
+            name={user.name}
+            src={avatarSrc(user.id)}
+            size={32}
+            className="md:hidden"
+          />
         </header>
 
         <main className="flex-1 overflow-y-auto p-6">
