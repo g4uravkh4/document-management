@@ -58,7 +58,7 @@ interface FlatFolder {
 function flattenFolders(nodes: FolderNode[], depth = 0): FlatFolder[] {
   const out: FlatFolder[] = [];
   for (const node of nodes) {
-    out.push({ id: node.id, label: `${'â€” '.repeat(depth)}${node.name}` });
+    out.push({ id: node.id, label: `${'— '.repeat(depth)}${node.name}` });
     out.push(...flattenFolders(node.children, depth + 1));
   }
   return out;
@@ -186,9 +186,6 @@ export default function DocumentsPage() {
             (yearsData.find((y) => y.isActive)?.id ?? '') ||
             (yearsData[0]?.id ?? ''),
         );
-        if (isAdmin) {
-          setClientId((prev) => prev || (clientsData[0]?.id ?? ''));
-        }
       })
       .catch(() => {
         // Filters are optional; the manager can still render.
@@ -294,7 +291,7 @@ export default function DocumentsPage() {
   const scopeClientName = isAdmin
     ? (clients.find((c) => c.id === clientId)?.name ?? '')
     : (clients.find((c) => c.id === user?.clientId)?.name ??
-      (user?.clientId ? 'Your firm' : 'â€”'));
+      (user?.clientId ? 'Your firm' : '—'));
   const scopeYearLabel = years.find((y) => y.id === fiscalYearId)?.label ?? '';
 
   function goToClientPicker() {
@@ -317,17 +314,6 @@ export default function DocumentsPage() {
       <PageHeader
         title="Documents"
         description="Client-wise file manager. Pick a client and fiscal year, then browse folders and documents."
-        action={
-          insideFiles ? (
-            <Button
-              onClick={() => setUploadOpen(true)}
-              title="Upload into the current folder"
-            >
-              <Upload className="h-4 w-4" />
-              Upload
-            </Button>
-          ) : undefined
-        }
       />
 
       {showClientPicker && (
@@ -362,7 +348,7 @@ export default function DocumentsPage() {
 
       {insideFiles && (
         <>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4">
             <ScopeBreadcrumb
               clientName={scopeClientName}
               fiscalYearLabel={scopeYearLabel}
@@ -372,9 +358,13 @@ export default function DocumentsPage() {
               onYearClick={() => openFolder(null)}
               onFolderClick={(id) => openFolder(id)}
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+          </div>
+
+          <Card className="w-full min-w-0 overflow-hidden p-4">
+            {/* Toolbar: filter + search + add folder + upload — single row, same width as folder grid, stays inside wrapper */}
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   value={search}
                   onChange={(e) => {
@@ -382,7 +372,7 @@ export default function DocumentsPage() {
                     setPage(1);
                   }}
                   placeholder="Search this view..."
-                  className="w-56 pl-9"
+                  className="h-9 w-full pl-9"
                 />
               </div>
               <Select
@@ -391,7 +381,7 @@ export default function DocumentsPage() {
                   setCategoryId(e.target.value);
                   setPage(1);
                 }}
-                className="w-40"
+                className="h-9 w-40 shrink-0"
                 aria-label="Filter by category"
               >
                 <option value="">All categories</option>
@@ -410,6 +400,7 @@ export default function DocumentsPage() {
                     setPage(1);
                   }}
                   title="Clear search and filters"
+                  className="h-9 shrink-0 px-2"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -417,24 +408,31 @@ export default function DocumentsPage() {
               <Button
                 variant="secondary"
                 onClick={() => setCreateFolder({ parentId: currentFolderId })}
+                className="h-9 shrink-0"
               >
                 <FolderPlus className="h-4 w-4" />
                 New folder
               </Button>
+              <Button
+                onClick={() => setUploadOpen(true)}
+                title="Upload into the current folder"
+                className="h-9 shrink-0"
+              >
+                <Upload className="h-4 w-4" />
+                Upload
+              </Button>
             </div>
-          </div>
 
-          <div
-            onDragOver={(e) => {
-              if (scopeReady && e.dataTransfer.types.includes('Files')) {
-                e.preventDefault();
-              }
-            }}
-            onDrop={handleMainDrop}
-          >
-            {error && <ErrorBanner message={error} />}
-
-            <Card className="overflow-hidden">
+            <div
+              className="mt-4 w-full min-w-0"
+              onDragOver={(e) => {
+                if (scopeReady && e.dataTransfer.types.includes('Files')) {
+                  e.preventDefault();
+                }
+              }}
+              onDrop={handleMainDrop}
+            >
+              {error && <ErrorBanner message={error} />}
               {treeLoading && folderChildren.length === 0 ? (
                 <div className="flex h-48 items-center justify-center">
                   <Spinner className="h-8 w-8 text-indigo-600" />
@@ -442,9 +440,13 @@ export default function DocumentsPage() {
               ) : (
                 <>
                   {folderChildren.length > 0 && (
-                    <div className="divide-y divide-gray-100 border-b border-gray-200">
+                    <div
+                      className={`grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ${
+                        documents && documents.items.length > 0 ? 'mb-4' : ''
+                      }`}
+                    >
                       {folderChildren.map((folder) => (
-                        <FolderRow
+                        <FolderTile
                           key={folder.id}
                           folder={folder}
                           isDropTarget={dropTargetId === folder.id}
@@ -466,34 +468,17 @@ export default function DocumentsPage() {
                       <Spinner className="h-8 w-8 text-indigo-600" />
                     </div>
                   ) : documents && documents.items.length > 0 ? (
-                    <table className="w-full text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
-                          <th className="px-5 py-3 font-medium">File</th>
-                          {currentFolderId === null && (
-                            <th className="px-4 py-3 font-medium">Folder</th>
-                          )}
-                          <th className="px-4 py-3 font-medium">Category</th>
-                          <th className="px-4 py-3 font-medium">Status</th>
-                          <th className="px-4 py-3 font-medium">Size</th>
-                          <th className="px-4 py-3 font-medium">Uploaded</th>
-                          <th className="px-4 py-3 text-right font-medium">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {documents.items.map((doc) => (
-                          <DocumentRow
-                            key={doc.id}
-                            doc={doc}
-                            isAdmin={isAdmin}
-                            showFolder={currentFolderId === null}
-                            onChanged={() => void loadDocs()}
-                          />
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {documents.items.map((doc) => (
+                        <DocumentTile
+                          key={doc.id}
+                          doc={doc}
+                          isAdmin={isAdmin}
+                          showFolder={currentFolderId === null}
+                          onChanged={() => void loadDocs()}
+                        />
+                      ))}
+                    </div>
                   ) : folderChildren.length === 0 ? (
                     <EmptyState
                       title={
@@ -524,10 +509,9 @@ export default function DocumentsPage() {
                   )}
                 </>
               )}
-            </Card>
-
+            </div>
             {documents && documents.totalPages > 1 && (
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-4 flex w-full min-w-0 flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-4">
                 <p className="text-sm text-gray-500">
                   Page {documents.page} of {documents.totalPages} (
                   {documents.total} total)
@@ -550,7 +534,7 @@ export default function DocumentsPage() {
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </>
       )}
 
@@ -819,7 +803,7 @@ function ScopeBreadcrumb({
   );
 }
 
-function FolderRow({
+function FolderTile({
   folder,
   isDropTarget,
   setDropTargetId,
@@ -841,10 +825,10 @@ function FolderRow({
   const subCount = folder.children.length;
   return (
     <div
-      className={`group flex items-center gap-3 px-5 py-3 transition-colors ${
+      className={`group rounded-lg border bg-white p-4 transition-colors ${
         isDropTarget
-          ? 'bg-indigo-50 ring-2 ring-inset ring-indigo-400'
-          : 'hover:bg-gray-50'
+          ? 'border-indigo-400 bg-indigo-50 ring-2 ring-indigo-200'
+          : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/40'
       }`}
       onDragEnter={(e) => {
         e.preventDefault();
@@ -867,22 +851,26 @@ function FolderRow({
       <button
         type="button"
         onClick={() => onOpen(folder.id)}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        className="flex w-full min-w-0 items-center gap-3 text-left"
       >
-        <FolderIcon className="h-5 w-5 shrink-0 text-amber-500" />
-        <span className="truncate font-medium text-gray-900">{folder.name}</span>
-        {subCount > 0 && (
-          <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-            {subCount} {subCount === 1 ? 'subfolder' : 'subfolders'}
-          </span>
-        )}
+        <FolderIcon className="h-8 w-8 shrink-0 text-amber-400" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-gray-900">
+            {folder.name}
+          </p>
+          <p className="text-xs text-gray-500">
+            {subCount === 0
+              ? 'Empty'
+              : `${subCount} ${subCount === 1 ? 'subfolder' : 'subfolders'}`}
+          </p>
+        </div>
       </button>
-      <div className="hidden shrink-0 items-center gap-1 group-hover:flex">
+      <div className="mt-3 hidden items-center justify-end gap-1 border-t border-gray-100 pt-2 group-hover:flex">
         <button
           type="button"
           onClick={onNewSubfolder}
           title="New subfolder"
-          className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
         >
           <FolderPlus className="h-4 w-4" />
         </button>
@@ -890,7 +878,7 @@ function FolderRow({
           type="button"
           onClick={onRename}
           title="Rename folder"
-          className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
         >
           <Pencil className="h-4 w-4" />
         </button>
@@ -898,7 +886,7 @@ function FolderRow({
           type="button"
           onClick={onDelete}
           title="Delete folder"
-          className="rounded p-1 text-red-500 hover:bg-red-50 hover:text-red-600"
+          className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -984,7 +972,7 @@ function FolderFormModal({
   );
 }
 
-function DocumentRow({
+function DocumentTile({
   doc,
   isAdmin,
   showFolder,
@@ -1028,7 +1016,7 @@ function DocumentRow({
 
   return (
     <>
-      <tr
+      <div
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData('text/plain', doc.id);
@@ -1036,75 +1024,69 @@ function DocumentRow({
           setDragging(true);
         }}
         onDragEnd={() => setDragging(false)}
-        className={`hover:bg-gray-50 ${dragging ? 'opacity-40' : ''}`}
+        className={`group rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-indigo-300 hover:shadow-sm ${
+          dragging ? 'opacity-40' : ''
+        }`}
       >
-        <td className="px-5 py-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-md bg-indigo-50 p-2 text-indigo-600">
-              <FileText className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-medium text-gray-900">{doc.title}</p>
-              <p className="max-w-64 truncate text-xs text-gray-500">
-                {doc.description ?? doc.originalName}
-              </p>
-            </div>
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="shrink-0 rounded-md bg-indigo-50 p-2 text-indigo-600">
+            <FileText className="h-5 w-5" />
           </div>
-        </td>
-        {showFolder && (
-          <td className="px-4 py-3">
-            {doc.folderPath ? (
-              <span className="inline-flex items-center gap-1 text-gray-600">
-                <FolderIcon className="h-3.5 w-3.5 text-amber-500" />
-                {doc.folderPath}
-              </span>
-            ) : (
-              <span className="text-gray-400">Unfiled</span>
-            )}
-          </td>
-        )}
-        <td className="px-4 py-3 text-gray-700">{doc.categoryName ?? '—'}</td>
-        <td className="px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-gray-900" title={doc.title}>
+              {doc.title}
+            </p>
+            <p className="truncate text-xs text-gray-500" title={doc.description ?? doc.originalName}>
+              {doc.description ?? doc.originalName}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <Badge color={statusBadgeColor(doc.status)}>{doc.status}</Badge>
-        </td>
-        <td className="px-4 py-3 text-gray-700">
-          {formatFileSize(doc.sizeBytes)}
-        </td>
-        <td className="px-4 py-3 text-gray-700">
-          {formatDateTime(doc.uploadedAt)}
-        </td>
-        <td className="px-4 py-3">
-          <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              onClick={() => void handleDownload()}
-              loading={downloading}
-              title="Download"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            {isAdmin && (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => setEditing(true)}
-                  title="Edit status or folder"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setConfirmOpen(true)}
-                  title="Delete"
-                  className="text-red-600 hover:bg-red-50"
-                >
-                  Delete
-                </Button>
-              </>
-            )}
-          </div>
-        </td>
-      </tr>
+          {showFolder && (
+            <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-gray-50 px-2 py-0.5 text-xs text-gray-600">
+              <FolderIcon className="h-3 w-3 shrink-0 text-amber-500" />
+              <span className="truncate">{doc.folderPath ?? 'Unfiled'}</span>
+            </span>
+          )}
+        </div>
+
+        <p className="mt-2 text-xs text-gray-400">
+          {doc.categoryName ?? 'Uncategorized'} · {formatFileSize(doc.sizeBytes)}{' '}
+          · {formatDateTime(doc.uploadedAt)}
+        </p>
+
+        <div className="mt-3 hidden items-center justify-end gap-1 border-t border-gray-100 pt-2 group-hover:flex">
+          <Button
+            variant="ghost"
+            onClick={() => void handleDownload()}
+            loading={downloading}
+            title="Download"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+          {isAdmin && (
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => setEditing(true)}
+                title="Edit status or folder"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmOpen(true)}
+                title="Delete"
+                className="text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
 
       {editing && (
         <EditDocumentModal
@@ -1234,7 +1216,7 @@ function UploadModal({
             <div>
               <Label htmlFor="docfy">Fiscal year</Label>
               <div className="flex h-9 items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-sm text-gray-700">
-                {currentYear?.label ?? 'â€”'}
+                {currentYear?.label ?? '—'}
               </div>
             </div>
             <div>

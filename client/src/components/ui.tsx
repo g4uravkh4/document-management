@@ -9,7 +9,8 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { ArrowLeft, Loader2, X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 
 export function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
   return <Loader2 className={`animate-spin ${className}`} aria-label="Loading" />;
@@ -146,7 +147,7 @@ export function Button({
 }
 
 const fieldClass =
-  'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
+  'rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
 
 export function Label({
   children,
@@ -276,6 +277,29 @@ export function statusBadgeColor(
   }
 }
 
+function PageHeaderBackButton() {
+  const router = useRouter();
+
+  function goBack() {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={goBack}
+      className="mb-3 inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
+    >
+      <ArrowLeft className="h-4 w-4" />
+      Back
+    </button>
+  );
+}
+
 export function PageHeader({
   title,
   description,
@@ -285,15 +309,19 @@ export function PageHeader({
   description?: string;
   action?: ReactNode;
 }) {
+  const pathname = usePathname();
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-        {description && (
-          <p className="mt-1 text-sm text-gray-500">{description}</p>
-        )}
+    <div className="mb-6">
+      {pathname && pathname !== '/' && <PageHeaderBackButton />}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
+          {description && (
+            <p className="mt-1 text-sm text-gray-500">{description}</p>
+          )}
+        </div>
+        {action}
       </div>
-      {action}
     </div>
   );
 }
