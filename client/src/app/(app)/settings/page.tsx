@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import { Bell, Monitor, Moon, Palette, Sun } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
+import { useSettings } from '@/lib/settings-context';
 import {
   Button,
   Card,
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const toast = useToast();
+  const { apply } = useSettings();
 
   useEffect(() => {
     api
@@ -73,6 +75,7 @@ export default function SettingsPage() {
       });
       setSetting(updated);
       setOriginalSetting(updated);
+      apply(updated);
       setSuccess(true);
       toast.success('Settings saved successfully');
     } catch (err) {

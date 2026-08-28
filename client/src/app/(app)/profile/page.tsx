@@ -5,6 +5,7 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { validatePassword, PASSWORD_HINT } from '@/lib/password';
 import { useToast } from '@/lib/toast-context';
 import {
   Avatar,
@@ -217,6 +218,12 @@ function PasswordCard() {
       toast.error(msg);
       return;
     }
+    const pwError = validatePassword(newPassword);
+    if (pwError) {
+      setError(pwError);
+      toast.error(pwError);
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccess(false);
@@ -272,6 +279,7 @@ function PasswordCard() {
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="At least 8 characters"
             />
+            <p className="mt-1 text-xs text-gray-500">{PASSWORD_HINT}</p>
           </div>
           <div>
             <Label htmlFor="profile-confirm-password">

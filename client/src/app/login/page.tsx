@@ -7,6 +7,7 @@ import { FileStack } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
+import { validatePassword, PASSWORD_HINT } from '@/lib/password';
 import { Button, ErrorBanner, Input, Label } from '@/components/ui';
 import type { AuthTokens } from '@/lib/types';
 
@@ -67,6 +68,12 @@ export default function LoginPage() {
       const msg = 'Passwords do not match';
       setError(msg);
       toast.error(msg);
+      return;
+    }
+    const pwError = validatePassword(password);
+    if (pwError) {
+      setError(pwError);
+      toast.error(pwError);
       return;
     }
     setError(null);
@@ -139,6 +146,12 @@ export default function LoginPage() {
       const msg = 'Passwords do not match';
       setError(msg);
       toast.error(msg);
+      return;
+    }
+    const pwError = validatePassword(newPassword);
+    if (pwError) {
+      setError(pwError);
+      toast.error(pwError);
       return;
     }
     setError(null);
@@ -266,6 +279,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
                 />
+                <p className="mt-1 text-xs text-gray-500">{PASSWORD_HINT}</p>
               </Field>
               <Field label="Confirm password">
                 <Input
@@ -357,6 +371,7 @@ export default function LoginPage() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="At least 8 characters"
                 />
+                <p className="mt-1 text-xs text-gray-500">{PASSWORD_HINT}</p>
               </Field>
               <Field label="Confirm new password">
                 <Input

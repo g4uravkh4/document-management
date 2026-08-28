@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   UpdateSettingData,
   UserSettingEntity,
@@ -27,10 +27,6 @@ export class SettingsService {
     userId: string,
     data: UpdateSettingData,
   ): Promise<UserSettingEntity> {
-    const existing = await this.settings.findByUserId(userId);
-    if (!existing) {
-      throw new NotFoundException('Settings not found');
-    }
     return this.settings.upsert(userId, data);
   }
 }

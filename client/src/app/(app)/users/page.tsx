@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import { formatDate } from '@/lib/format';
+import { validatePassword, PASSWORD_HINT } from '@/lib/password';
 import {
   Avatar,
   avatarSrc,
@@ -277,6 +278,19 @@ function UserModal({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (password) {
+      const pwError = validatePassword(password);
+      if (pwError) {
+        setError(pwError);
+        toast.error(pwError);
+        return;
+      }
+    } else if (!isEdit) {
+      const msg = 'Password is required';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -373,6 +387,7 @@ function UserModal({
             onChange={(e) => setPassword(e.target.value)}
             placeholder={isEdit ? '••••••••' : 'At least 8 characters'}
           />
+          <p className="mt-1 text-xs text-gray-500">{PASSWORD_HINT}</p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
