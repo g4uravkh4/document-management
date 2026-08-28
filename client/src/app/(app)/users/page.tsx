@@ -241,7 +241,7 @@ function UserModal({
   const [error, setError] = useState<string | null>(null);
 
   const isDirty = !isEdit || (
-    name !== (user?.name ?? '') ||
+    name.trim() !== (user?.name ?? '').trim() ||
     role !== (user?.role ?? 'CLIENT') ||
     clientId !== (user?.clientId ?? '') ||
     password !== '' ||
@@ -281,17 +281,17 @@ function UserModal({
     setError(null);
     try {
       const body: Record<string, unknown> = {
-        name,
+        name: name.trim(),
         role,
       };
       if (!isEdit) {
-        body.email = email;
+        body.email = email.trim();
         body.password = password;
+        if (role === 'CLIENT' && clientId) body.clientId = clientId;
       } else {
         if (password) body.password = password;
-      }
-      if (role === 'CLIENT' && clientId) {
-        body.clientId = clientId;
+        // Always send clientId for edit to allow clearing/unlinking
+        body.clientId = role === 'CLIENT' ? (clientId || null) : null;
       }
       let savedId: string;
       if (isEdit) {

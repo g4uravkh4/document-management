@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -6,6 +7,7 @@ import {
   IsUUID,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { ROLES } from '@ca-firm/shared';
 import type { Role } from '@ca-firm/shared';
@@ -28,8 +30,10 @@ export class UpdateUserDto {
   role?: Role;
 
   @IsOptional()
+  @ValidateIf((o) => o.clientId !== null)
   @IsUUID()
-  clientId?: string;
+  @Transform(({ value }) => (value === '' ? null : value))
+  clientId?: string | null;
 
   @IsOptional()
   @IsBoolean()

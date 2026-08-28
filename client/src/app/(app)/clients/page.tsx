@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Building2, Plus } from 'lucide-react';
+import { Building2, Plus, Search, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
@@ -29,6 +29,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,6 +51,18 @@ export default function ClientsPage() {
     return <ErrorBanner message="You are not authorized to view this page." />;
   }
 
+  const filteredClients = clients.filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q) ||
+      (c.phone && c.phone.toLowerCase().includes(q)) ||
+      (c.pan && c.pan.toLowerCase().includes(q)) ||
+      (c.address && c.address.toLowerCase().includes(q))
+    );
+  });
+
   return (
     <div>
       <PageHeader
@@ -57,6 +70,25 @@ export default function ClientsPage() {
         description="Manage client records linked to user accounts"
         action={<ClientModalTrigger onSaved={() => setReload((n) => n + 1)} />}
       />
+
+      <Card className="mb-4 p-4">
+        <div className="flex w-full min-w-0 items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search clients by name, email, PAN or phone..."
+              className="h-9 w-full pl-9"
+            />
+          </div>
+          {search && (
+            <Button variant="ghost" onClick={() => setSearch('')} className="h-9 shrink-0 px-2" title="Clear search">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </Card>
 
       {error && <ErrorBanner message={error} />}
 
@@ -70,6 +102,13 @@ export default function ClientsPage() {
             title="No clients yet"
             description="Create your first client record to get started."
             action={<ClientModalTrigger onSaved={() => setReload((n) => n + 1)} />}
+          />
+        </Card>
+      ) : filteredClients.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="No matching clients"
+            description={`No clients found for "${search}". Try a different search term.`}
           />
         </Card>
       ) : (
@@ -86,7 +125,7 @@ export default function ClientsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {clients.map((client) => (
+              {filteredClients.map((client) => (
                 <ClientRow
                   key={client.id}
                   client={client}
@@ -247,11 +286,11 @@ function ClientModal({
   const [error, setError] = useState<string | null>(null);
 
   const isDirty = !isEdit || (
-    name !== (client?.name ?? '') ||
-    email !== (client?.email ?? '') ||
-    phone !== (client?.phone ?? '') ||
-    pan !== (client?.pan ?? '') ||
-    address !== (client?.address ?? '') ||
+    name.trim() !== (client?.name ?? '').trim() ||
+    email.trim() !== (client?.email ?? '').trim() ||
+    phone.trim() !== (client?.phone ?? '').trim() ||
+    pan.trim() !== (client?.pan ?? '').trim() ||
+    address.trim() !== (client?.address ?? '').trim() ||
     logoFile !== null
   );
   const toast = useToast();
@@ -277,12 +316,12 @@ function ClientModal({
     event.preventDefault();
     setSaving(true);
     setError(null);
-    const body = {
-      name,
-      email,
-      ...(phone ? { phone } : {}),
-      ...(pan ? { pan } : {}),
-      ...(address ? { address } : {}),
+    const body: Record<string, unknown> = {
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim() ? phone.trim() : null,
+      pan: pan.trim() ? pan.trim() : null,
+      address: address.trim() ? address.trim() : null,
     };
     try {
       let savedId: string;
@@ -367,18 +406,27 @@ function ClientModal({
             <Label htmlFor="pan">PAN</Label>
             <Input
               id="pan"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={15}
               value={pan}
-              onChange={(e) => setPan(e.target.value)}
+              onChange={(e) => setPan(e.target.value.replace(/\D/g, ''))}
               placeholder="e.g. 605123456"
             />
+            <p className="mt-1 text-xs text-gray-500">Digits only</p>
           </div>
           <div>
             <Label htmlFor="phone">Phone</Label>
             <Input
               id="phone"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={15}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+              placeholder="e.g. 9800000000"
             />
+            <p className="mt-1 text-xs text-gray-500">Digits only</p>
           </div>
         </div>
         <div>

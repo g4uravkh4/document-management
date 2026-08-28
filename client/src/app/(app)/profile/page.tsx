@@ -52,7 +52,7 @@ function ProfileCard({
   const [success, setSuccess] = useState(false);
   const toast = useToast();
 
-  const isDirty = name !== user.name;
+  const isDirty = name.trim() !== user.name.trim();
 
   async function handleAvatarPicked(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -88,11 +88,18 @@ function ProfileCard({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) {
+      const msg = 'Name is required';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     setSaving(true);
     setError(null);
     setSuccess(false);
     try {
-      const saved = await api.patch<PublicUser>('/users/me', { name });
+      const saved = await api.patch<PublicUser>('/users/me', { name: trimmed });
       onUpdated(saved);
       setSuccess(true);
       toast.success('Profile updated successfully');

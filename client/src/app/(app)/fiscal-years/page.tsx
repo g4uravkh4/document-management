@@ -235,11 +235,11 @@ function FiscalYearModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isDirty = !isEdit || (
-    label !== (year?.label ?? '') ||
-    startDate !== (year ? toDateInput(year.startDate) : '') ||
-    endDate !== (year ? toDateInput(year.endDate) : '')
-  );
+  const isDirty = isEdit
+    ? (label.trim() !== (year?.label ?? '').trim() ||
+       startDate !== (year ? toDateInput(year.startDate) : '') ||
+       endDate !== (year ? toDateInput(year.endDate) : ''))
+    : (label.trim() !== '' && startDate !== '' && endDate !== '');
   const toast = useToast();
 
   function close() {
@@ -259,7 +259,7 @@ function FiscalYearModal({
       return;
     }
     const body = {
-      label,
+      label: label.trim(),
       startDate,
       endDate,
     };

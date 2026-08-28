@@ -214,17 +214,17 @@ export default function DocumentsPage() {
 
   async function handleDeleteFolder() {
     if (!deleteFolder) return;
+    const target = deleteFolder;
     setDeletingFolder(true);
     try {
-      await api.delete(`/folders/${deleteFolder.id}`);
-      if (currentFolderId === deleteFolder.id) openFolder(null);
-      setDeleteFolder(null);
+      await api.delete(`/folders/${target.id}`);
+      if (currentFolderId === target.id) openFolder(null);
       await loadTree();
-      toast.success(`Folder "${deleteFolder.name}" deleted successfully`);
+      toast.success(`Folder "${target.name}" deleted successfully`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Delete failed');
-      setDeleteFolder(null);
     } finally {
+      setDeleteFolder(null);
       setDeletingFolder(false);
     }
   }
@@ -924,19 +924,26 @@ function FolderFormModal({
   const [error, setError] = useState<string | null>(null);
   const toast = useToast();
 
-  const isDirty = mode === 'create' || name !== (folder?.name ?? '');
+  const isDirty = name.trim() !== '' && (mode === 'create' || name !== (folder?.name ?? ''));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) {
+      const msg = 'Folder name is required';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       if (mode === 'rename' && folder) {
-        await api.patch(`/folders/${folder.id}`, { name });
+        await api.patch(`/folders/${folder.id}`, { name: trimmed });
         toast.success('Folder renamed successfully');
       } else {
         await api.post('/folders', {
-          name,
+          name: trimmed,
           clientId,
           fiscalYearId,
           ...(parentId ? { parentId } : {}),
@@ -1104,24 +1111,22 @@ function DocumentTile({
             <Download className="h-4 w-4" />
           </Button>
           {isAdmin && (
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => setEditing(true)}
-                title="Edit status or folder"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setConfirmOpen(true)}
-                title="Delete"
-                className="text-red-600 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              onClick={() => setEditing(true)}
+              title="Edit status or folder"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
           )}
+          <Button
+            variant="ghost"
+            onClick={() => setConfirmOpen(true)}
+            title="Delete"
+            className="text-red-600 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 

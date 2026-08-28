@@ -1,10 +1,13 @@
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateClientDto {
@@ -19,19 +22,27 @@ export class UpdateClientDto {
   email?: string;
 
   @IsOptional()
+  @ValidateIf((o) => o.phone !== null)
   @IsString()
-  @MaxLength(30)
-  phone?: string;
+  @MaxLength(15)
+  @Matches(/^[0-9]+$/, { message: 'Phone must contain digits only' })
+  @Transform(({ value }) => (value === '' ? null : value))
+  phone?: string | null;
 
   @IsOptional()
+  @ValidateIf((o) => o.pan !== null)
   @IsString()
-  @MaxLength(30)
-  pan?: string;
+  @MaxLength(15)
+  @Matches(/^[0-9]+$/, { message: 'PAN must contain digits only' })
+  @Transform(({ value }) => (value === '' ? null : value))
+  pan?: string | null;
 
   @IsOptional()
+  @ValidateIf((o) => o.address !== null)
   @IsString()
   @MaxLength(300)
-  address?: string;
+  @Transform(({ value }) => (value === '' ? null : value))
+  address?: string | null;
 
   @IsOptional()
   @IsBoolean()

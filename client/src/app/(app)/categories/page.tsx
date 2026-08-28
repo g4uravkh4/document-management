@@ -171,7 +171,7 @@ function CategoryRow({
         onClose={() => setConfirmOpen(false)}
         onConfirm={() => void handleDelete()}
         title="Delete category"
-        message={`Are you sure you want to delete "${category.name}"? Documents in this category will become uncategorized.`}
+        message={`Are you sure you want to delete "${category.name}"? This will fail if any documents use this category. Move or delete them first.`}
         loading={deleting}
       />
     </>
@@ -193,7 +193,7 @@ function CategoryModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isDirty = !isEdit || name !== (category?.name ?? '');
+  const isDirty = isEdit ? name.trim() !== (category?.name ?? '').trim() : name.trim() !== '';
   const toast = useToast();
 
   function close() {
@@ -205,13 +205,21 @@ function CategoryModal({
     event.preventDefault();
     setSaving(true);
     setError(null);
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      const msg = 'Name is required';
+      setError(msg);
+      toast.error(msg);
+      setSaving(false);
+      return;
+    }
     try {
       if (isEdit) {
-        await api.patch(`/document-categories/${category!.id}`, { name });
-        toast.success(`Category "${name}" updated`);
+        await api.patch(`/document-categories/${category!.id}`, { name: trimmedName });
+        toast.success(`Category "${trimmedName}" updated`);
       } else {
-        await api.post('/document-categories', { name });
-        toast.success(`Category "${name}" created`);
+        await api.post('/document-categories', { name: trimmedName });
+        toast.success(`Category "${trimmedName}" created`);
       }
       onSaved();
       close();
