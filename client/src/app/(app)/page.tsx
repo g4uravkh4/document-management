@@ -9,7 +9,6 @@ import {
   HardDrive,
   TrendingUp,
   UserPlus,
-  FileUp,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -99,15 +98,6 @@ export default function DashboardPage() {
           isAdminOverview
             ? `Active fiscal year: ${data.activeFiscalYearLabel ?? 'Not set'}`
             : 'Your document overview'
-        }
-        action={
-          <Link
-            href="/documents"
-            className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            <FileUp className="h-4 w-4" />
-            Upload document
-          </Link>
         }
       />
 
