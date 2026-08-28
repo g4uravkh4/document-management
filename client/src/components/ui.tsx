@@ -15,12 +15,54 @@ export function Spinner({ className = 'h-5 w-5' }: { className?: string }) {
   return <Loader2 className={`animate-spin ${className}`} aria-label="Loading" />;
 }
 
-export function avatarSrc(userId: string): string {
-  return `/api/users/${userId}/avatar`;
+export function avatarSrc(userId: string, version?: string | number): string {
+  const base = `/api/users/${userId}/avatar`;
+  return version === undefined ? base : `${base}?v=${encodeURIComponent(String(version))}`;
 }
 
 export function logoSrc(clientId: string): string {
   return `/api/clients/${clientId}/logo`;
+}
+
+// Avatar URLs sit behind JWT auth, which <img src> cannot send, so images are
+// fetched with an Authorization header and cached as object URLs keyed by the
+// (versioned) source path.
+const objectUrlCache = new Map<string, string>();
+
+function useAuthedImage(src: string): string | null {
+  const [url, setUrl] = useState<string | null>(() => objectUrlCache.get(src) ?? null);
+
+  useEffect(() => {
+    if (!src) {
+      setUrl(null);
+      return;
+    }
+    let cancelled = false;
+    const cached = objectUrlCache.get(src);
+    if (cached) {
+      setUrl(cached);
+      return;
+    }
+    (async () => {
+      try {
+        const token = window.localStorage.getItem('ca_firm_access_token');
+        const response = await fetch(src, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        if (!response.ok) return;
+        const objectUrl = URL.createObjectURL(await response.blob());
+        objectUrlCache.set(src, objectUrl);
+        if (!cancelled) setUrl(objectUrl);
+      } catch {
+        // Leave fallback initials in place.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  return url;
 }
 
 export function Avatar({
@@ -34,12 +76,13 @@ export function Avatar({
   size?: number;
   className?: string;
 }) {
+  const resolved = useAuthedImage(src ?? '');
   const [failed, setFailed] = useState(false);
 
-  if (src && !failed) {
+  if (src && resolved && !failed) {
     return (
       <img
-        src={src}
+        src={resolved}
         alt={name}
         onError={() => setFailed(true)}
         className={`shrink-0 rounded-full bg-gray-100 object-cover ${className}`}

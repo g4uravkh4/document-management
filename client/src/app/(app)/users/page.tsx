@@ -148,7 +148,7 @@ function UserRow({
       <tr className="hover:bg-gray-50">
         <td className="px-5 py-3">
           <div className="flex items-center gap-3">
-            <Avatar name={u.name} src={u.avatarKey ? avatarSrc(u.id) : null} size={36} />
+            <Avatar name={u.name} src={u.avatarKey ? avatarSrc(u.id, u.avatarKey) : null} size={36} />
             <div>
               <p className="font-medium text-gray-900">{u.name}</p>
               <p className="text-xs text-gray-500">{u.email}</p>
@@ -309,7 +309,7 @@ function UserModal({
         <div className="flex items-center gap-4">
           <Avatar
             name={name || '?'}
-            src={avatarPreview ?? (user?.avatarKey ? avatarSrc(user.id) : null)}
+            src={avatarPreview ?? (user?.avatarKey ? avatarSrc(user.id, user.avatarKey) : null)}
             size={56}
           />
           <div className="flex-1">

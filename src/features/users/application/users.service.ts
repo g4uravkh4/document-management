@@ -20,6 +20,7 @@ import {
 } from '../domain/ports';
 import type { UserRepository } from '../domain/ports';
 import { CreateUserDto } from '../presentation/dto/create-user.dto';
+import { UpdateProfileDto } from '../presentation/dto/update-profile.dto';
 import { UpdateUserDto } from '../presentation/dto/update-user.dto';
 
 @Injectable()
@@ -74,6 +75,32 @@ export class UsersService {
 
     const user = await this.users.update(id, data);
     return this.toPublic(user);
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<PublicUser> {
+    const user = await this.getUserOrThrow(userId);
+
+    const data: UpdateUserData = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.newPassword !== undefined) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Current password is required');
+      }
+      const valid = await bcrypt.compare(
+        dto.currentPassword,
+        user.passwordHash,
+      );
+      if (!valid) {
+        throw new BadRequestException('Current password is incorrect');
+      }
+      data.passwordHash = await bcrypt.hash(dto.newPassword, 12);
+    }
+
+    const updated = await this.users.update(userId, data);
+    return this.toPublic(updated);
   }
 
   async remove(id: string): Promise<void> {

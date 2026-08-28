@@ -1,4 +1,6 @@
 import {
+  HttpCode,
+  HttpStatus,
   Body,
   Controller,
   Delete,
@@ -28,6 +30,7 @@ import {
 import { UsersService } from '../application/users.service';
 import { PublicUser } from '../domain/ports';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -61,6 +64,15 @@ export class UsersController {
     return this.usersService.create(dto);
   }
 
+  @Patch('me')
+  @ApiOperation({ summary: 'Update own profile (name, password)' })
+  updateProfile(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateProfileDto,
+  ): Promise<PublicUser> {
+    return this.usersService.updateProfile(user.sub, dto);
+  }
+
   @Patch(':id')
   @Roles(ROLES.ADMIN)
   @ApiOperation({ summary: 'Update a user (admin)' })
@@ -72,6 +84,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @Roles(ROLES.ADMIN)
   @ApiOperation({ summary: 'Delete a user (admin)' })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {

@@ -1,4 +1,6 @@
 import {
+  HttpCode,
+  HttpStatus,
   Body,
   Controller,
   Delete,
@@ -53,6 +55,7 @@ export class DocumentCategoriesController {
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @Roles(ROLES.ADMIN)
   @ApiOperation({ summary: 'Delete a document category (admin)' })
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {

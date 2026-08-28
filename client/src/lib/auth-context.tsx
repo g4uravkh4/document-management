@@ -19,6 +19,7 @@ interface AuthContextValue {
   status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
   setSession: (tokens: AuthTokens) => void;
+  updateUser: (user: PublicUser) => void;
   logout: () => Promise<void>;
 }
 
@@ -74,6 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setSession],
   );
 
+  const updateUser = useCallback((next: PublicUser) => {
+    setUser(next);
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       const refreshToken = window.localStorage.getItem('ca_firm_refresh_token');
@@ -89,8 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, status, login, setSession, logout }),
-    [user, status, login, setSession, logout],
+    () => ({ user, status, login, setSession, updateUser, logout }),
+    [user, status, login, setSession, updateUser, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -14,6 +14,7 @@ import {
   Tags,
   Users as UsersIcon,
   Building2,
+  UserRound,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Avatar, Badge, Spinner, avatarSrc } from '@/components/ui';
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   { href: '/categories', label: 'Categories', icon: Tags, adminOnly: true },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/profile', label: 'Profile', icon: UserRound },
 ];
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -104,15 +106,23 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </nav>
         <div className="m-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-3">
-              <Avatar name={user.name} src={avatarSrc(user.id)} size={36} />
+            <Link
+              href="/profile"
+              className="flex min-w-0 items-center gap-3 rounded-md hover:opacity-80"
+              title="Edit profile"
+            >
+              <Avatar
+                name={user.name}
+                src={user.avatarKey ? avatarSrc(user.id, user.avatarKey) : null}
+                size={36}
+              />
               <div className="min-w-0 leading-tight">
                 <p className="truncate text-sm font-medium text-gray-900">
                   {user.name}
                 </p>
                 <p className="truncate text-xs text-gray-500">{user.email}</p>
               </div>
-            </div>
+            </Link>
             <button
               type="button"
               onClick={() => void logout()}
@@ -145,7 +155,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </p>
           <Avatar
             name={user.name}
-            src={avatarSrc(user.id)}
+            src={user.avatarKey ? avatarSrc(user.id, user.avatarKey) : null}
             size={32}
             className="md:hidden"
           />
