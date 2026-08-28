@@ -242,6 +242,15 @@ function ClientModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDirty = !isEdit || (
+    name !== (client?.name ?? '') ||
+    email !== (client?.email ?? '') ||
+    phone !== (client?.phone ?? '') ||
+    pan !== (client?.pan ?? '') ||
+    address !== (client?.address ?? '') ||
+    logoFile !== null
+  );
+
   useEffect(() => {
     return () => {
       if (logoPreview) URL.revokeObjectURL(logoPreview);
@@ -377,7 +386,7 @@ function ClientModal({
           <Button type="button" variant="secondary" onClick={close}>
             Cancel
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!isDirty}>
             {isEdit ? 'Save changes' : 'Create client'}
           </Button>
         </div>

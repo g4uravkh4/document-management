@@ -231,6 +231,12 @@ function FiscalYearModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDirty = !isEdit || (
+    label !== (year?.label ?? '') ||
+    startDate !== (year ? toDateInput(year.startDate) : '') ||
+    endDate !== (year ? toDateInput(year.endDate) : '')
+  );
+
   function close() {
     if (onClose) onClose();
     else setOpen(false);
@@ -306,7 +312,7 @@ function FiscalYearModal({
           <Button type="button" variant="secondary" onClick={close}>
             Cancel
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!isDirty}>
             {isEdit ? 'Save changes' : 'Create fiscal year'}
           </Button>
         </div>

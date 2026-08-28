@@ -50,6 +50,8 @@ function ProfileCard({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const isDirty = name !== user.name;
+
   async function handleAvatarPicked(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -170,7 +172,7 @@ function ProfileCard({
           </p>
         </div>
         <div className="flex justify-end">
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!isDirty}>
             Save changes
           </Button>
         </div>
@@ -186,6 +188,8 @@ function PasswordCard() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const isDirty = currentPassword !== '' || newPassword !== '' || confirmPassword !== '';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -261,7 +265,7 @@ function PasswordCard() {
           </div>
         </div>
         <div className="flex justify-end">
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!isDirty}>
             Update password
           </Button>
         </div>

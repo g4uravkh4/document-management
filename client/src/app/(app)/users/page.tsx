@@ -236,6 +236,14 @@ function UserModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDirty = !isEdit || (
+    name !== (user?.name ?? '') ||
+    role !== (user?.role ?? 'CLIENT') ||
+    clientId !== (user?.clientId ?? '') ||
+    password !== '' ||
+    avatarFile !== null
+  );
+
   useEffect(() => {
     api
       .get<Client[]>('/clients')
@@ -393,7 +401,7 @@ function UserModal({
           <Button type="button" variant="secondary" onClick={close}>
             Cancel
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!isDirty}>
             {isEdit ? 'Save changes' : 'Create user'}
           </Button>
         </div>

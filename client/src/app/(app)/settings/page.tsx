@@ -34,6 +34,7 @@ function ThemeIcon({ theme }: { theme: ThemePreference }) {
 
 export default function SettingsPage() {
   const [setting, setSetting] = useState<UserSetting | null>(null);
+  const [originalSetting, setOriginalSetting] = useState<UserSetting | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,12 +43,20 @@ export default function SettingsPage() {
   useEffect(() => {
     api
       .get<UserSetting>('/settings/me')
-      .then(setSetting)
+      .then((s) => {
+        setSetting(s);
+        setOriginalSetting(s);
+      })
       .catch((err) =>
         setError(err instanceof Error ? err.message : 'Failed to load settings'),
       )
       .finally(() => setLoading(false));
   }, []);
+
+  const isDirty =
+    setting !== null &&
+    originalSetting !== null &&
+    (setting.theme !== originalSetting.theme || setting.language !== originalSetting.language);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,6 +70,7 @@ export default function SettingsPage() {
         language: setting.language,
       });
       setSetting(updated);
+      setOriginalSetting(updated);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
@@ -150,7 +160,7 @@ export default function SettingsPage() {
           )}
 
           <div className="flex justify-end">
-            <Button type="submit" loading={saving}>
+            <Button type="submit" loading={saving} disabled={!isDirty}>
               Save settings
             </Button>
           </div>

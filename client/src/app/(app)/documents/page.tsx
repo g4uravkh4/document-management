@@ -917,6 +917,8 @@ function FolderFormModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDirty = mode === 'create' || name !== (folder?.name ?? '');
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -963,7 +965,7 @@ function FolderFormModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!isDirty}>
             {mode === 'rename' ? 'Save' : 'Create folder'}
           </Button>
         </div>
@@ -1304,6 +1306,8 @@ function EditDocumentModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDirty = status !== doc.status || folderId !== (doc.folderId ?? '');
+
   useEffect(() => {
     let cancelled = false;
     api
@@ -1375,7 +1379,7 @@ function EditDocumentModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!isDirty}>
             Save
           </Button>
         </div>
